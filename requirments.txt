@@ -1,0 +1,35 @@
+# GitHub
+""Use other people repositories""
+Enter github.com inbox
+Accept invitation
+Open github desktop 
+Clone repository->save on PC.
+Open in VSCODE
+Start working(configure, make branch, add changes, etc..)
+""Configurate username & password""
+git config --global user.name "raghad595"
+git config --global user.email "raghadeldieb595@gmail.com"
+""Initial project""
+git config --global init.defaultBranch main
+""Add changes""
+git add . #all
+git add file.py or folder
+git commit -m "Message explains changes"
+""Add to branch""
+git push #default/current
+git push origin branchname
+""Share changes with team to merge with original files""
+Enter github.com -> repositry -> Compare & pull request
+Enter title & description
+Enter reviewers from team to accept & approve changes or reject & give comments
+""Review team member changes""
+Enter github.com -> repositry
+Check changes & description
+If ok, Merge pull request, Commit message & delete unneeeded branch.
+If 2 members pushed changes on same file. It will be conflict to be resolved.
+""Solve conflict""
+Check conflict
+Write commit to tell team what to do.
+""Pull others changes""
+git pull
+# Streamlit
