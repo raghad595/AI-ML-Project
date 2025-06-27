@@ -1,5 +1,9 @@
 import pandas as pd
-from sklearn.preprocessing import LabelEncoder
+import numpy as np
+from sklearn.preprocessing import LabelEncoder, OneHotEncoder, StandardScaler, MinMaxScaler
+from imblearn.over_sampling import SMOTE, RandomOverSampler
+from imblearn.under_sampling import RandomUnderSampler
+from collections import Counter
 # Handling missing values in a DataFrame: Remove, Imputation, or Fill
 def fill_missing_values(df, method='mean', value=None):
     """
@@ -64,24 +68,78 @@ def encode_categorical_features(df, method='onehot'):
     else:
         raise ValueError("Invalid encoding method specified.")
     
-def scale_features(df, method='minmax'):
+def scale_features(df, model="linear"):
     """
     Scale features in a DataFrame using specified method.
+    Method determined based on outliers & Regression-Classification task.
     
     Parameters:
     df (pd.DataFrame): The DataFrame to process.
-    method (str): Scaling method ('minmax', 'standard').
     
     Returns:
     pd.DataFrame: DataFrame with features scaled.
     """
-    if method == 'minmax':
-        return (df - df.min()) / (df.max() - df.min())
-    elif method == 'standard':
-        return (df - df.mean()) / df.std()
+    numeric_cols = df.select_dtypes(include=['number']).columns
+    df_scaled = df.copy()
+    # Check model type
+    if model not in ["linear", "logistic"]:
+        raise ValueError("Model type must be 'linear' or 'logistic'.")
+    if model 
+    has_outliers = False
+    for col in numeric_cols:
+        col_min = df[col].min()
+        col_max = df[col].max()
+        col_std = df[col].std()
+        # Avoid division by zero
+        if col_std == 0:
+            continue
+        ratio = (col_max - col_min) / col_std
+        if ratio > 10:
+            has_outliers = True
+            break
+    # Choose scaling method based on outliers
+    if has_outliers:
+        scaler=StandardScaler()
     else:
-        raise ValueError("Invalid scaling method specified.")
+        scaler=MinMaxScaler()
+    # Scale only numeric columns
+    df_scaled[numeric_cols] = scaler.fit_transform(df[numeric_cols])
+    return df_scaled
     
+def sample_data(df, features, target,n=5):
+    """
+    Sample a specified number of rows from the DataFrame.
+    
+    Parameters:
+    df (pd.DataFrame): The DataFrame to sample from.
+    n (int): Number of rows to sample.
+    
+    Returns:
+    pd.DataFrame: Sampled DataFrame.
+    """
+    # Used for auto strategy selection in imbalanced datasets
+    counts = Counter(target)
+    majority_class = max(counts, key=counts.get)
+    minority_class = min(counts, key=counts.get)
+    imbalance_ratio = counts[majority_class] / counts[minority_class]
+    # Balanced
+    if imbalance_ratio < 1.5:
+        pass
+    #Oversampling
+    elif imbalance_ratio < 3:
+        over_sampler = RandomOverSampler(sampling_strategy="minority", random_state=42)
+        x, y = over_sampler.fit_resample(features, target)
+    #SMOTE
+    elif imbalance_ratio < 5:
+        smote = SMOTE(sampling_strategy="minority", random_state=42)
+        x, y = smote.fit_resample(features, target)
+    else:
+        # Both oversampling and undersampling
+        over_sampler = RandomOverSampler(sampling_strategy=0.4)
+        x, y = over_sampler.fit_resample(features, target)
+        under_sampler = RandomUnderSampler(sampling_strategy=0.5)
+        x, y = under_sampler.fit_resample(x, y)
+    return x, y
 
 def preprocess_data(df, fill_method='mean', encode_method='onehot', scale_method='minmax'):
     """
