@@ -3,6 +3,7 @@ import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 import streamlit as st
+from utils.preprocessing import preprocess_data
 st.title("Machine learning application")
 
 #input & handle data
@@ -47,6 +48,7 @@ if "data" in st.session_state:
                 fig, ax = plt.subplots(figsize=(10, 8))
                 sns.heatmap(correlation_matrix, annot=True, fmt=".2f", cmap="coolwarm", ax=ax)
                 st.pyplot(fig)
+                
     # Select features & target variable
     st.header("Feature Selection")
     features=st.multiselect("Select features:", data.columns.tolist())
@@ -69,4 +71,54 @@ if "data" in st.session_state:
                 st.dataframe(df_features)
                 st.write("Target Variable:")
                 st.dataframe(df_target)
+                
+# Data preprocessing
+if "features" in st.session_state and "target" in st.session_state:
+    st.header("Data Preprocessing")
+    st.subheader("Missing Value Handling")
+    fill_method = st.selectbox("Select missing value handling method:", ["auto", "mean", "median", "mode", "constant", "ffill", "bfill", "drop"])
+    if fill_method == "constant":
+        fill_value = st.text_input("Enter constant value for missing values:")
+    else:
+        fill_value = None
+    
+    # Encode categorical variables
+    encode_method = st.selectbox("Select encoding method:", ["auto", "onehot", "label"])
+    if encode_method == "auto":
+        if data[st.session_state["features"]].select_dtypes(include=["object", "category"]).nunique().max() <= 10:
+            encode_method = "onehot"
+        else:
+            encode_method = "label"
+            
+    # Scale numeric features
+    scale_method = st.selectbox("Select scaling method:", ["auto", "standard", "minmax"])
+    if scale_method == "auto":
+        model_type = st.selectbox("Select model type for scaling:", ["linear", "logistic", "KNN", "tree"])
+    else:
+        model_type = None
+        
+    #Sample data
+    sample_method = st.selectbox("Select sampling method:", ["auto", "oversample", "undersample", "smote"])
+    
+    # Preprocess the data
+    if st.button("Preprocess Data"):
+        try:
+            x, y = preprocess_data(
+                df=data,
+                target=st.session_state["target"][0],
+                fill_method=fill_method,
+                encode_method=encode_method,
+                scale_method=scale_method,
+                sample_method=sample_method,
+                value=fill_value
+            )
+            st.session_state["x"] = x
+            st.session_state["y"] = y
+            st.success("Data preprocessed successfully!")
+            st.subheader("Preprocessed Features")
+            st.dataframe(x)
+            st.subheader("Preprocessed Target")
+            st.dataframe(y)
+        except Exception as e:
+            st.error(f"Error during preprocessing: {e}")
         
