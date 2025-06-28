@@ -4,6 +4,8 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import streamlit as st
 from utils.preprocessing import preprocess_data
+from utils.models import train_model
+from utils.evaluation import evaluate_model
 st.title("Machine learning application")
 
 #input & handle data
@@ -81,7 +83,6 @@ if "features" in st.session_state and "target" in st.session_state:
         fill_value = st.text_input("Enter constant value for missing values:")
     else:
         fill_value = None
-    
     # Encode categorical variables
     encode_method = st.selectbox("Select encoding method:", ["auto", "onehot", "label"])
     if encode_method == "auto":
@@ -89,17 +90,14 @@ if "features" in st.session_state and "target" in st.session_state:
             encode_method = "onehot"
         else:
             encode_method = "label"
-            
     # Scale numeric features
     scale_method = st.selectbox("Select scaling method:", ["auto", "standard", "minmax"])
     if scale_method == "auto":
         model_type = st.selectbox("Select model type for scaling:", ["linear", "logistic", "KNN", "tree"])
     else:
         model_type = None
-        
     #Sample data
     sample_method = st.selectbox("Select sampling method:", ["auto", "oversample", "undersample", "smote"])
-    
     # Preprocess the data
     if st.button("Preprocess Data"):
         try:
@@ -121,4 +119,47 @@ if "features" in st.session_state and "target" in st.session_state:
             st.dataframe(y)
         except Exception as e:
             st.error(f"Error during preprocessing: {e}")
-        
+
+# Model training
+if "x" in st.session_state and "y" in st.session_state:
+    st.header("Model Training")
+    training_options = st.radio("Select an option:", ["Classification", "Regression"])
+    if training_options == "Classification":
+        model_type = st.selectbox("Select classification model type:", ["logistic", "KNN", "svm", "random_forest", "tree", "xgboost"])
+    elif training_options == "Regression":
+        model_type = st.selectbox("Select regression model type:", ["linear", "KNN_regressor", "svm_regressor", "random_forest_regressor", "DT_regressor", "xgboost_regressor"])
+    test_size = st.slider("Select test size (fraction):", 0.1, 0.5, 0.2, 0.05)
+    if st.button("Train Model"):
+        try:
+            model, predictions, xtrain, xtest, ytrain, ytest = train_model(
+                df=pd.concat([st.session_state["x"], st.session_state["y"]], axis=1),
+                features=st.session_state["features"],
+                target=st.session_state["target"][0],
+                test=test_size,
+                model_type=model_type
+            )
+            st.session_state["model"] = model
+            st.session_state["predictions"] = predictions
+            st.success("Model trained successfully!")
+            st.subheader("Model Predictions")
+            st.dataframe(pd.DataFrame(predictions, columns=[st.session_state["target"][0]]))
+        except Exception as e:
+            st.error(f"Error during model training: {e}")
+          
+# Evaluation  
+if "model" in st.session_state and "x" in st.session_state and "y" in st.session_state:
+    st.header("Model Evaluation")
+    if st.button("Evaluate Model"):
+        try:
+            evaluation_metrics = evaluate_model(
+                model=st.session_state["model"],
+                x_test=st.session_state["x"],
+                y_test=st.session_state["y"],
+                model_type=training_options.lower()  # Convert to lowercase for consistency
+            )
+            st.session_state["evaluation_metrics"] = evaluation_metrics
+            st.success("Model evaluated successfully!")
+            st.subheader("Evaluation Metrics")
+            st.write(evaluation_metrics)
+        except Exception as e:
+            st.error(f"Error during model evaluation: {e}") 
