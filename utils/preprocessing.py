@@ -152,6 +152,9 @@ def sample_data(df, features, target, method="auto"):
     new_features (pd.DataFrame): Sampled features DataFrame.
     new_target (pd.Series): Sampled target Series.
     """
+    x, y = features.copy(), target.copy()
+    classes = y.unique()
+    is_binary = len(classes) == 2
     if method == 'auto':
         # Used for auto strategy selection in imbalanced datasets
         counts = Counter(target)
@@ -163,30 +166,30 @@ def sample_data(df, features, target, method="auto"):
             pass
         #Oversampling
         elif imbalance_ratio < 3:
-            over_sampler = RandomOverSampler(sampling_strategy="minority", random_state=42)
-            x, y = over_sampler.fit_resample(features, target)
+            over_sampler = RandomOverSampler(sampling_strategy="minority" if is_binary else "not majority", random_state=42)
+            x, y = over_sampler.fit_resample(x, y)
         #SMOTE
         elif imbalance_ratio < 5:
-            smote = SMOTE(sampling_strategy="minority", random_state=42)
-            x, y = smote.fit_resample(features, target)
+            smote = SMOTE(sampling_strategy="minority" if is_binary else "not majority", random_state=42)
+            x, y = smote.fit_resample(x, y)
         else:
             # Both oversampling and undersampling
-            over_sampler = RandomOverSampler(sampling_strategy=0.4)
-            x, y = over_sampler.fit_resample(features, target)
-            under_sampler = RandomUnderSampler(sampling_strategy=0.5)
+            over_sampler = RandomOverSampler(sampling_strategy="minority" if is_binary else "not majority", random_state=42)
+            x, y = over_sampler.fit_resample(x, y)
+            under_sampler = RandomUnderSampler(sampling_strategy="majority", random_state=42)
             x, y = under_sampler.fit_resample(x, y)
     elif method == 'oversample':
         # Oversampling
-        over_sampler = RandomOverSampler(sampling_strategy="minority", random_state=42)
-        x, y = over_sampler.fit_resample(features, target)
+        over_sampler = RandomOverSampler(sampling_strategy="minority" if is_binary else "not majority", random_state=42)
+        x, y = over_sampler.fit_resample(x, y)
     elif method == 'undersample':
         # Undersampling
         under_sampler = RandomUnderSampler(sampling_strategy="majority", random_state=42)
-        x, y = under_sampler.fit_resample(features, target)
+        x, y = under_sampler.fit_resample(x, y)
     elif method == 'smote':
         # SMOTE
-        smote = SMOTE(sampling_strategy="minority", random_state=42)
-        x, y = smote.fit_resample(features, target)
+        smote = SMOTE(sampling_strategy="minority" if is_binary else "not majority", random_state=42)
+        x, y = smote.fit_resample(x, y)
     return x, y
 
 def preprocess_data(df, target, model="linear", value=0, fill_method="auto", encode_method="auto", scale_method="auto", sample_method="auto"):
