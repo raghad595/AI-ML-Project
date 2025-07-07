@@ -9,17 +9,18 @@ from utils.evaluation import evaluate_model
 st.title("Machine learning application")
 
 #input & handle data
-st.header("User input")
+st.sidebar.header("User input")
 file= st.file_uploader("Upload a CSV file", type=["csv"])
-if st.button("Read") and file is not None:
-    # Read the CSV file
-    try:
-        st.session_state["data"] = pd.read_csv(file)
-        st.success("Data loaded successfully!")
-    except Exception as e:
-        st.error(f"Error loading data: {e}")
-else:
-    st.error("Please upload a CSV file then click read.")
+if st.sidebar.button("Read"):
+    if file is not None:
+        # Read the CSV file
+        try:
+            st.session_state["data"] = pd.read_csv(file)
+            st.success("Data loaded successfully!")
+        except Exception as e:
+            st.error(f"Error loading data: {e}")
+    else:
+        st.error("Please upload a CSV file then click read.")
     
 #Data exploration
 if "data" in st.session_state:
@@ -29,7 +30,7 @@ if "data" in st.session_state:
     #Data Exploration
     st.header("Data Exploration")
     options = ["Data Summary", "Data Types", "Missing Values", "Correlation Matrix"]
-    option=st.radio("Select an option:", options)
+    option=st.sidebar.radio("Select an option:", options)
     if option == "Data Summary":
         with st.expander("Data Summary", expanded=True):
             st.write(data.describe())
@@ -52,14 +53,14 @@ if "data" in st.session_state:
                 st.pyplot(fig)
                 
     # Select features & target variable
-    st.header("Feature Selection")
-    features=st.multiselect("Select features:", data.columns.tolist())
+    st.sidebar.header("Feature Selection")
+    features=st.sidebar.multiselect("Select features:", data.columns.tolist())
     target_col = [col for col in data.columns if col not in features]
     if target_col:
-        target=st.multiselect("Select target variable:", target_col)
+        target=st.sidebar.multiselect("Select target variable:", target_col)
     else:
-        target = st.multiselect("Select target variable:", data.columns.tolist(), index=0)
-    if st.button("Confirm"):
+        target = st.sidebar.multiselect("Select target variable:", data.columns.tolist(), index=0)
+    if st.sidebar.button("Confirm"):
         if not features or not target:
             st.error("Please select at least one feature and one target variable.")
         else:
@@ -76,30 +77,33 @@ if "data" in st.session_state:
                 
 # Data preprocessing
 if "features" in st.session_state and "target" in st.session_state:
-    st.header("Data Preprocessing")
-    st.subheader("Missing Value Handling")
-    fill_method = st.selectbox("Select missing value handling method:", ["auto", "mean", "median", "mode", "constant", "ffill", "bfill", "drop"])
+    st.sidebar.header("Data Preprocessing")
+    st.sidebar.subheader("Missing Value Handling")
+    fill_method = st.sidebar.selectbox("Select missing value handling method:", ["auto", "mean", "median", "mode", "constant", "ffill", "bfill", "drop"])
     if fill_method == "constant":
-        fill_value = st.text_input("Enter constant value for missing values:")
+        fill_value = st.sidebar.text_input("Enter constant value for missing values:")
     else:
         fill_value = None
     # Encode categorical variables
-    encode_method = st.selectbox("Select encoding method:", ["auto", "onehot", "label"])
+    encode_method = st.sidebar.selectbox("Select encoding method:", ["auto", "onehot", "label"])
     if encode_method == "auto":
         if data[st.session_state["features"]].select_dtypes(include=["object", "category"]).nunique().max() <= 10:
             encode_method = "onehot"
         else:
             encode_method = "label"
     # Scale numeric features
-    scale_method = st.selectbox("Select scaling method:", ["auto", "standard", "minmax"])
-    if scale_method == "auto":
-        model_type = st.selectbox("Select model type for scaling:", ["linear", "logistic", "KNN", "tree"])
-    else:
-        model_type = None
+    scale_method = st.sidebar.selectbox("Select scaling method:", ["auto", "standard", "minmax"])
+    # Select training options
+    st.sidebar.header("Training Options")
+    training_options = st.sidebar.radio("Select an option:", ["Classification", "Regression"])
+    if training_options == "Classification":
+        model_type = st.sidebar.selectbox("Select classification model type:", ["logistic", "KNN", "svm", "random_forest", "tree", "xgboost"])
+    elif training_options == "Regression":
+        model_type = st.sidebar.selectbox("Select regression model type:", ["linear", "KNN_regressor", "svm_regressor", "random_forest_regressor", "DT_regressor", "xgboost_regressor"])
     #Sample data
-    sample_method = st.selectbox("Select sampling method:", ["auto", "oversample", "undersample", "smote"])
+    sample_method = st.sidebar.selectbox("Select sampling method:", ["auto", "oversample", "undersample", "smote"])
     # Preprocess the data
-    if st.button("Preprocess Data"):
+    if st.sidebar.button("Preprocess Data"):
         try:
             x, y = preprocess_data(
                 df=data,
@@ -113,22 +117,18 @@ if "features" in st.session_state and "target" in st.session_state:
             st.session_state["x"] = x
             st.session_state["y"] = y
             st.success("Data preprocessed successfully!")
-            st.subheader("Preprocessed Features")
-            st.dataframe(x)
-            st.subheader("Preprocessed Target")
-            st.dataframe(y)
+            with st.expander("Preprocessed Features and Target Variable", expanded=True):
+                st.subheader("Preprocessed Features")
+                st.dataframe(x)
+                st.subheader("Preprocessed Target")
+                st.dataframe(y)
         except Exception as e:
             st.error(f"Error during preprocessing: {e}")
 
 # Model training
 if "x" in st.session_state and "y" in st.session_state:
     st.header("Model Training")
-    training_options = st.radio("Select an option:", ["Classification", "Regression"])
-    if training_options == "Classification":
-        model_type = st.selectbox("Select classification model type:", ["logistic", "KNN", "svm", "random_forest", "tree", "xgboost"])
-    elif training_options == "Regression":
-        model_type = st.selectbox("Select regression model type:", ["linear", "KNN_regressor", "svm_regressor", "random_forest_regressor", "DT_regressor", "xgboost_regressor"])
-    test_size = st.slider("Select test size (fraction):", 0.1, 0.5, 0.2, 0.05)
+    test_size = st.sidebar.slider("Select test size (fraction):", 0.1, 0.5, 0.2, 0.05)
     if st.button("Train Model"):
         try:
             model, predictions, xtrain, xtest, ytrain, ytest = train_model(
@@ -148,8 +148,8 @@ if "x" in st.session_state and "y" in st.session_state:
           
 # Evaluation  
 if "model" in st.session_state and "x" in st.session_state and "y" in st.session_state:
-    st.header("Model Evaluation")
-    if st.button("Evaluate Model"):
+    st.sidebar.header("Model Evaluation")
+    if st.sidebar.button("Evaluate Model"):
         try:
             evaluation_metrics = evaluate_model(
                 model=st.session_state["model"],
